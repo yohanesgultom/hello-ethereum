@@ -32,6 +32,11 @@ geth --datadir=hello1 console 2>console.log
 
 #### Registration
 
+```
+node register.js
+```
+
+
 Capture email and public wallet (validation ignored), create new account and store all data as new record in memory.
 Data structure:
 
@@ -43,7 +48,10 @@ Data structure:
     'private_keystore', // keystore file for private_wallet
 }
 ```
-Command:
-```
-node register.js
-```
+
+Ethereum APIs used:
+* `admin.datadir()`
+* `eth.getAccounts()`
+* `personal.newAccount()`
+
+> Somehow `personal.listAccounts()` is not working so `eth.getAccounts()` is used instead.
