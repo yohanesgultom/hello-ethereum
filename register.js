@@ -2,6 +2,7 @@ const http = require('http');
 const qs = require('querystring');
 const port = 3000;
 const web3_extended = require('web3_ipc');
+const fs = require('fs');
 web3 = web3_extended.create({
     host: process.env.ipc || 'hello1/geth.ipc',
     ipc:true,
@@ -12,6 +13,9 @@ web3 = web3_extended.create({
 
 // simple in-memory data for POC
 const data = [];
+
+// ethereum blockchain datadir
+var datadir;
 
 const app = http.createServer(function(req, res){
     if (req.url == '/') {
@@ -31,13 +35,14 @@ const app = http.createServer(function(req, res){
                     if (data.length == 0 || response.length == 0) {
                         res.write('<p>No account</p>');
                     } else {
+                        console.log(data);
                         res.write('<br><br>');
                         res.write('<table border="1" cellspacing="0" cellpadding="1">');
-                        res.write('<tr><th>Email</th><th>Public Wallet</th><th>Private Wallet</th></tr>');
+                        res.write('<tr><th>Email</th><th>Public Wallet</th><th>Private Wallet</th><th>Private Keystore</th></tr>');
                         response.forEach(function (account) {
                             let accountData = data.find(function (it) { return it.private_wallet == account });
                             if (accountData) {
-                                res.write('<tr><td>' + accountData.email + '</td><td>' + accountData.public_wallet + '</td><td>' + accountData.private_wallet + '</td></tr>');
+                                res.write('<tr><td>' + accountData.email + '</td><td>' + accountData.public_wallet + '</td><td>' + accountData.private_wallet + '</td><td>' + accountData.private_keystore + '</td></tr>');
                             }
                         });
                         res.write('</table>');
@@ -66,8 +71,10 @@ const app = http.createServer(function(req, res){
                 let uniqueStr = Date.now().toString();
                 web3.personal.newAccount(uniqueStr, function (error, result){
                     if(!error){
-                        console.log('new wallet: ' + result);
+                        console.log('new wallet: ' + result.toString());
                         body.private_wallet = result;
+                        // find keystore in keystore directory
+                        body.private_keystore = fs.readdirSync(datadir + '/keystore').find(function (f) { return f.endsWith(body.private_wallet.substring(2)); })
                         data.push(body);
                         res.writeHead(301, { Location: 'http://localhost:' + port });
                         res.end();
@@ -87,5 +94,14 @@ const app = http.createServer(function(req, res){
 });
 
 app.listen(port, function () {
-    console.log('Server running on http://localhost:' + port);
+    web3.admin.datadir(function(error, result) {
+        if (!error) {
+            datadir = result;
+            console.log('Blockchain datadir: ' + result);
+            console.log('Server running on http://localhost:' + port);
+        } else {
+            console.error(error);
+            process.exit();
+        }
+    });
 });
